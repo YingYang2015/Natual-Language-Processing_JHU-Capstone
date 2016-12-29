@@ -1,0 +1,317 @@
+---
+title: "JHU Data Science Capstone Intermediate Report - text prediction"
+author: "Ying Yang"
+date: "November 21, 2016"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(eval = FALSE)
+knitr::opts_chunk$set(warning = FALSE)
+knitr::opts_chunk$set(message = FALSE)
+```
+
+## Introduction
+This capstone is to provide the prediction of the next words using the natual language processing techinque. This intermediate report provides data acquisition and cleaning, summary of the dataset, exploratory analysis, and the N-gram model fitting. The tool used in this project is R. 
+
+## Data acquisition and cleaning
+The data used is provided by [SwiftKey](https://d396qusza40orc.cloudfront.net/dsscapstone/dataset/Coursera-SwiftKey.zip). The data is from a corpus called [HC Corpora](www.corpora.heliohost.org). You can find the detailed explaination on the corpora avaliable from [readme file](http://www.corpora.heliohost.org/aboutcorpus.html).
+
+### Download the data
+First, I download the data from the provided URL to my working directory
+```{r}
+setwd(".../10. Capstone")
+
+fileDest <- "./Coursera-SwiftKey.zip" 
+fileURL <- "https://d396qusza40orc.cloudfront.net/dsscapstone/dataset/Coursera-SwiftKey.zip"
+download.file(url = fileURL, destfile = fileDest)
+unzip("Coursera-SwiftKey.zip")
+```
+### Load the data
+```{r}
+library(tm)
+
+twitteData <- file("./final/en_US/en_US.twitter.txt", "r") 
+twitter <- readLines(twitteData, encoding = "UTF-8", skipNul=TRUE) 
+close(twitteData) # close the connection
+
+blogsData <- file("./final/en_US/en_US.blogs.txt", "r") 
+blogs <- readLines(blogsData, encoding = "UTF-8", skipNul=TRUE) 
+close(blogsData) 
+
+newsData <- file("./final/en_US/en_US.news.txt", "r") 
+news <- readLines(newsData, encoding = "UTF-8", skipNul=TRUE) 
+close(newsData) 
+```
+### Summary Statistics
+Then I provide the summary statistics of the data files, including the size, number of the lines, the length in characters of the longest lines, and the number of words of each dataset. A simple table is generated. 
+```{r, eval = TRUE}
+library(R.utils)
+# this is to use the linux command, wc -L filename
+# wc -L <filename> prints the length of longest line (GNU extension)
+
+dataSummary <- data.frame()
+dataSummary[1,1] <- "twitter"
+dataSummary[2,1] <- "blogs"
+dataSummary[3,1] <- "news"
+
+# find out the size of each file
+dataSummary[1,2] <- file.info("./final/en_US/en_US.twitter.txt")$size / (1024*1024)
+dataSummary[2,2] <- file.info("./final/en_US/en_US.blogs.txt")$size / (1024*1024)
+dataSummary[3,2] <- file.info("./final/en_US/en_US.news.txt")$size / (1024*1024)
+
+# find out the number of lines in each file
+dataSummary[1,3] <- as.numeric(gsub("[^0-9]", "", 
+                                    system2("wc", args = "-l ./final/en_US/en_US.twitter.txt", 
+                                                          stdout=TRUE)))
+dataSummary[2,3] <- as.numeric(gsub("[^0-9]", "", 
+                                    system2("wc", args = "-l ./final/en_US/en_US.blogs.txt", 
+                                                          stdout=TRUE)))
+dataSummary[3,3] <- as.numeric(gsub("[^0-9]", "", 
+                                    system2("wc", args = "-l ./final/en_US/en_US.news.txt", 
+                                                          stdout=TRUE)))
+# count the longest line in characters 
+dataSummary[1,4] <- as.numeric(gsub("[^0-9]", "", 
+                                    system2("wc", args = "-L ./final/en_US/en_US.twitter.txt", 
+                                                          stdout=TRUE)))
+dataSummary[2,4] <- as.numeric(gsub("[^0-9]", "", 
+                                    system2("wc", args = "-L ./final/en_US/en_US.blogs.txt", 
+                                                          stdout=TRUE)))
+dataSummary[3,4] <- as.numeric(gsub("[^0-9]", "", 
+                                    system2("wc", args = "-L ./final/en_US/en_US.news.txt", 
+                                                          stdout=TRUE)))
+# count the words
+dataSummary[1,5] <- as.numeric(gsub("[^0-9]", "", 
+                                    system2("wc", args = "-w ./final/en_US/en_US.twitter.txt", 
+                                                          stdout=TRUE)))
+dataSummary[2,5] <- as.numeric(gsub("[^0-9]", "", 
+                                    system2("wc", args = "-w ./final/en_US/en_US.blogs.txt", 
+                                                          stdout=TRUE)))
+dataSummary[3,5] <- as.numeric(gsub("[^0-9]", "", 
+                                    system2("wc", args = "-w ./final/en_US/en_US.news.txt", 
+                                                          stdout=TRUE)))
+
+names(dataSummary) <- c("name","fileSize", "lineLength", "longestLine", "wordsCount")
+
+dataSummary
+```
+
+Twitter data has the highest number of lines. Blog data is the largest, which is around 200MB. Blog data also has the longest line with over 40 million characters. In total, the whole dataset is over 550MB. 
+
+### Generate a random sample
+To reiterate, to build models you don't need to load in and use all of the data. Often relatively few randomly selected rows or chunks need to be included to get an accurate approximation to results that would be obtained using all the data. 
+
+I then randomly generate 20\% data lines from the original datasets (twitter, blogs, and news) and write it out to a separate file after the data cleaning. In this way, we don't need to recreate it everytime. 
+
+```{r}
+## Generating a random sapmle of all sources
+set.seed(123456)
+prop = 0.2
+sampleTwitter <- twitter[sample(1:length(twitter),prop*length(twitter))]
+sampleBlogs <- blogs[sample(1:length(blogs),prop*length(blogs))]
+sampleNews <- news[sample(1:length(news),prop*length(news))]
+
+sampleD <- c(sampleTwitter,sampleNews,sampleBlogs)
+```
+
+### Data cleaning
+Next, I cleaned the text data in the following steps
+
+  - remove words with non-ASCII characters 
+  - convert it to lower cases
+  - remove stop words
+  - remove punctuation
+  - remove extra white spaces
+  - remove number
+  - remove URL
+  - remove websites
+  - remove email
+  - remove profanity words
+  - word stemming
+
+When modeling and predicting the text words, some steps may not be necessary, we may consider not doing them, such as removing stopwords and word stemming. 
+
+To remove profanity words fromt he dataset, I otained the profanity words list from (http://www.freewebheaders.com/wordpress/wp-content/uploads/full-list-of-bad-words-banned-by-google-txt-file.zip) and downloaded into my working directory and loaded the data.
+
+```{r}
+## load the profanity words
+profanity <- file("profanitywords.txt", "r") 
+profanityFilter <- readLines(profanity, encoding = "UTF-8", skipNul=TRUE) 
+profanityFilter <- iconv(profanityFilter,"latin1","ASCII",sub = "")
+close(profanity)
+```
+
+```{r}
+## create a function cleanCorpus to clean the dataset
+cleanCorpus <- function(originalData, profanityFilter){
+        #' remove words with non-ASCII characters        
+        data <- iconv(originalData,"latin1","ASCII",sub = " ")
+        # Convert it to Corpus
+        proData <- Corpus(VectorSource(data))
+        #' Convert it to lower cases
+        proData <- tm_map(proData, content_transformer(tolower))
+        #' Remove stop words  ### This might be optional
+        proData <- tm_map(proData, removeWords, stopwords("english"))  
+        #' Remove punctuation
+        proData <- tm_map(proData, removePunctuation)  
+        #' Remove extra white spaces
+        proData <- tm_map(proData, stripWhitespace)  
+        #' Remove number
+        proData <- tm_map(proData, removeNumbers) 
+        # Remove URL
+        urlExp <- "(f|ht)tp\\S+\\s*"  # \\S mataches anything but a white space. \\s matches white space
+        removeUrl <- function(x) gsub(urlExp, "", x) 
+        proData <- tm_map(proData, content_transformer(removeUrl))
+        # Remove websites
+        webExp <- "www\\S+\\s*"
+        removeWeb <- function(x) gsub(webExp, "", x) 
+        proData <- tm_map(proData, content_transformer(removeWeb))
+        #' Remove email
+        emailExp <- "[a-z]+@[a-z]+[.][a-z.]+"        
+        removeEmail <- function(x) gsub(emailExp, "", x) 
+        proData <- tm_map(proData, content_transformer(removeEmail))
+        #' Remove profanity words
+        proData <- tm_map(proData, removeWords, profanityFilter) 
+        #' initiate steming   (e.g. doing ->  do)  ### This might be optional
+        proData <- tm_map(proData, stemDocument) 
+        proData
+}
+```
+
+```{r}
+sampleData <- cleanCorpus(sampleD, profanityFilter)
+save(sampleData, file = "finalSampleCorpus.RData")
+```
+
+## Build N-grams for the tokenized data
+[N-grams](https://en.wikipedia.org/wiki/N-gram) are created to explore word frequencies. An n-gram of size 1 is referred to as a "unigram"; size 2 is a "bigram" (or, less commonly, a "digram"); size 3 is a "trigram". Larger sizes are sometimes referred to by the value of n, e.g., "four-gram", "five-gram", and so on.
+
+In this project, I've created unigram, bigram, trigram, and fourgram for preparing the prediction. 
+
+```{r}
+#' 
+#' Using the tidytext package, create unigrams, bigrams and trigrams are created.
+library(stringr)
+library(tidytext)
+library(dplyr)  # count
+
+tokenizedNgrams <- function(corpusData, n){
+        # convert it to data frame
+        df <- as.data.frame(unlist(
+                lapply(corpusData[1:length(content(corpusData))], as.character)))
+        names(df) <- "text"
+        
+        # Build N-grams
+        ngram <- df %>%
+                unnest_tokens(word, text, token = "ngrams", n=n)
+}
+
+```
+
+```{r}
+# create n-grams for 20% of the sample   
+unigramS  <- tokenizedNgrams(sampleData, 1)
+bigramS   <- tokenizedNgrams(sampleData, 2)
+trigramS  <- tokenizedNgrams(sampleData, 3)
+fourgramS <- tokenizedNgrams(sampleData, 4)
+```
+
+## Expoloratory analysis
+In the exploratory analysis, I first calculate the frequency of the words appeared in each N-gram model. 
+
+```{r}
+# create a function to calcuate the frequency of ngram models
+wordFreq <- function(ngram, maxWords){
+    ngram <- ngram %>% count(word)
+    m <- (dim(ngram))[1]
+    names(ngram) <- c("word", "instance")
+    ngram <- as.data.frame(ngram)
+    # sort by word (ascending) and instance (descending)
+    ngram <- ngram[order(-ngram$instance, ngram$word),]
+    # cumulative instance of the words
+    ngram$cumInstance  <- cumsum(ngram$instance)
+    # frequency of the words
+    ngram$frequency    <- ngram$instance/ngram$cumInstance[m]*100
+    # cumulartive frequency of the word
+    ngram$cumFrequency <- ngram$cumInstance/ngram$cumInstance[m]*100
+    ngram$id <- 1:m
+    return(ngram)
+}
+# Generate the word frequency for each ngram models and save it. 
+unigramS  <- wordFreq(unigramS)
+bigramS   <- wordFreq(bigramS)
+trigramS  <- wordFreq(trigramS)
+quadgramS <- wordFreq(quadgramS)
+save(unigramS, bigramS, trigramS, quadgramS, file = "sampleNgrams.RData")
+```
+If we look closer to the word frequency table, we find that only 0.26\% unique words are needed to cover 50\% of all word instances in the unigram under this sample data. To cover 90\% of all words, only 3.62\% unique words are needed. As the size of the ngram increases, the number of words needed to cover half of all phrase instances also dramatically increases. Starting from trigram, the frequency of the phrases seems are almost evenly spreaded. This indicates that if we want to use a n-gram with higher size, we need to include a large amount of parameters in order to cover a large vocabulary. To make the model more efficient, we will not use four-gram in the prediction analysis. 
+
+```{r, eval = TRUE, echo = FALSE}
+setwd("C:/Users/User/Dropbox/Share folders/Jia-YY/10. Capstone")
+load("sampleNgrams.RData")
+```
+
+
+```{r, eval = TRUE}
+####################### some interesting findings #########################
+#' How many unique words do you need in a frequency sorted dicionary over 
+#' 50% of all word instances in the language? 
+tbl <- data.frame("Ngram" = c("Unigram", "Bigram", "Trigram", "Four-gram"),
+                  "sampleLength" = c(dim(unigramS)[1], dim(bigramS)[1], dim(trigramS)[1], dim(fourgramS)[1]))
+tbl$'50Coverage' <- c((min(unigramS$id[which(unigramS$cumFrequency > 50)])),
+                      (min(bigramS$id[which(bigramS$cumFrequency > 50)])),
+                      (min(trigramS$id[which(trigramS$cumFrequency > 50)])),
+                      (min(fourgramS$id[which(fourgramS$cumFrequency > 50)])))
+tbl$'50CovRate' <- tbl$'50Coverage'/tbl$sampleLength*100
+tbl$'90Coverage' <- c((min(unigramS$id[which(unigramS$cumFrequency > 90)])),
+                      (min(bigramS$id[which(bigramS$cumFrequency > 90)])),
+                      (min(trigramS$id[which(trigramS$cumFrequency > 90)])),
+                      (min(fourgramS$id[which(fourgramS$cumFrequency > 90)])))
+tbl$'90CovRate' <- tbl$'90Coverage'/tbl$sampleLength*100
+tbl$'90CovRate' <- round(tbl$'90CovRate', 2)
+tbl$'50CovRate' <- round(tbl$'50CovRate', 2)
+tbl
+```
+
+
+The distribution of the word frequencies from unigram, bigram, and trigram are plotted. 
+
+
+```{r, eval = TRUE}
+library(ggplot2)
+frequencyGraph <- function(data, n, ngramName, color){
+  a <- data[1:n,]
+  a$word1 <-factor(a$word, levels=a[order(a$instance, decreasing = TRUE), "word"])
+  ggplot(a, aes(y=instance, x=word1)) + 
+    geom_bar(stat="identity", fill= color) + 
+    ggtitle(paste("Top", n, "frequent words in", ngramName)) + 
+    theme(axis.text.x = element_text(angle=30, hjust=1)) 
+  
+}
+frequencyGraph(unigramS, 30, "Unigram", "red")
+frequencyGraph(bigramS, 30, "Bigram", "purple")
+frequencyGraph(trigramS, 30, "Trigram", "blue")
+
+```
+Next, the wordclouds of the ngrams are plotted. 
+```{r}
+# word cloud
+library(wordcloud, quietly = TRUE)
+wordcloud(unigramS$word, unigramS$instance, max.words = 100, colors=brewer.pal(8, "Dark2"))
+wordcloud(bigramS$word,  bigramS$instance,  max.words = 80, colors=brewer.pal(8, "Dark2"))
+wordcloud(trigramS$word, trigramS$instance, max.words = 80, colors=brewer.pal(8, "Dark2"))
+```
+
+Word cloud for the first 100 words in unigram
+![Word Cloud of the Unigram](Sample1Cloud.png)
+
+Word cloud for the first 80 words in bigram
+![Word Cloud of the Bigram](Sample2Cloud.png)
+
+Word cloud for the first 80 words in trigram
+![Word Cloud of the Trigram](Sample3Cloud.png)
+
+
+## Future plan
+The next step in this project would be build a predictive model based on the N-grams. To smooth the unobserved probability, I plan to use the Naive backoff model in the predictio model. There is a trade off between efficiency and accuracy. By selecting a larger number of parameters, namely including more phrases will increase the accuracy, but decrease the model efficiency. Therefore, I plan to try to select different number of parameters. Finally, I will create an application for text prediction, in which user can type a word and the App will predict the next word. A presentation slide will be created to highlight the product.

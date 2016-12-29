@@ -1,0 +1,39 @@
+---
+title: "N-gram Model and Prediction"
+author: "Ying Yang"
+date: "December 27, 2016"
+output: html_document
+---
+
+# Predict the next word
+This capstone is to provide the prediction of the next words using the natual language processing techinque. 
+
+## Data
+The data used is provided by [SwiftKey](https://d396qusza40orc.cloudfront.net/dsscapstone/dataset/Coursera-SwiftKey.zip). You can find the detailed explaination on the corpora avaliable from [readme file](http://www.corpora.heliohost.org/aboutcorpus.html). The dataset contains corpus from twitter, blogs, and news. The whole dataset is over 550MB.
+
+To build the predictive models, we don't need to load in and use all of the data. Often relatively few randomly selected rows or chunks need to be included to get an accurate approximation to results that would be obtained using all the data. Therefore, 20% of data lines are randomly generated from the original datasets (twitter, blogs, and news). 
+
+## Clean the data
+The dataset is then cleaned with the following steps,
+
+  - remove words with non-ASCII characters 
+  - convert it to lower cases
+  - remove punctuation
+  - remove extra white spaces
+  - remove unmeaningful repeated words
+  - remove number
+  - remove URL
+  - remove websites
+  - remove email
+  - remove profanity words
+
+The dataset is efficiently shrinked from 550MB to 33MB. 
+
+## Building Ngram Models for prediction
+[N-grams](https://en.wikipedia.org/wiki/N-gram) are created to explore word frequencies. An n-gram of size 1 is referred to as a "unigram"; size 2 is a "bigram" (or, less commonly, a "digram"); size 3 is a "trigram". Larger sizes are sometimes referred to by the value of n, e.g., "four-gram", "five-gram", and so on. In this project, I've created unigram, bigram, trigram, and fourgram for preparing the prediction. That means to predict the next word based on the previous 1, 2, or 3 words.  
+
+To take care of unobserved n-grams, meaning that a combination of words does not appear in the corpra, we could use interpolation (a mixture of multiple n-gram models) or backoff models. For very large N-grams like the web, we usualy use ["Stupid backoff"](https://en.wikipedia.org/wiki/Katz%27s_back-off_model) (Brants et al. 2007). In Stupid Backoff, we first use the four-gram if we have enough evidence, otherwise we back off and use the trigram model, if there isn't enough of a trigram count, we back off and use bigram, if there still isn't enough evidence, we use the unigram probability. 
+
+To improve the efficiency, the probability is calculated based on Marchov Chain. Moreover, the prediction algorithm stores words as indexes, not strings (hashing). This also improves the prediction speed significantly. 
+
+
