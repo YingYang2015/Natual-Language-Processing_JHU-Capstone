@@ -4,9 +4,6 @@ library(tm)
 ########## Function applies the backoff method #########################
 source("cleanCorpus.R")
 source("backoffPrediction.R")
-load("bigramModel.RData")
-load("trigramModel.RData")
-load("fourgramModel.RData")
 
 ############# Start building the server #################################
 shinyServer(function(input, output) {

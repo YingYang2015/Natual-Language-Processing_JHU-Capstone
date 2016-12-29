@@ -14,10 +14,8 @@ knitr::opts_chunk$set(echo = FALSE)
 - Input: Any Phrase (e.g. How are you)
 - Output: The predicted next word (e.g. doing)
 
-[Click here for the app](http://varianceexplained.org/r/trump-tweets/)
-[Check the Github]()
 
-<!-- ![](App view.png) -->
+
 ```{r, out.width = "600px"}
 knitr::include_graphics("App view.png")
 ```
@@ -27,6 +25,9 @@ Built by
 ```{r, out.width = "100px"}
 knitr::include_graphics("RStudio Logo.png")
 ```
+[Check here for the App](https://yangyingtina.shinyapps.io/Shiny_App/)     
+
+[Check here for Github](https://github.com/YingYang2015/Natual-Language-Processing_JHU-Capstone)
             
 ## Data
 
@@ -48,10 +49,8 @@ knitr::include_graphics("RStudio Logo.png")
 
 - Unigram, Bi-gram, Tri-gram, and Four-gram are used
 
-```{r, out.width = "300px"}
-knitr::include_graphics("Shiny App/Wordcloud/Sample2Cloud.png")
-```
-```{r, out.width = "300px"}
+Tri-gram example
+```{r, out.width = "500px"}
 knitr::include_graphics("Shiny App/Wordcloud/Sample3Cloud.png")
 ```
 
