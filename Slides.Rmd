@@ -62,6 +62,6 @@ To improve the efficiency of prediction
 - [Stupid Backoff Model](https://en.wikipedia.org/wiki/Katz%27s_back-off_model)
 - Markov Chain: Calculate the conditional probability of the phrase
 - Hasing: stores words as indexes, not strings
-- 
+- Prediction time: < 0.1s
 
 

@@ -8,7 +8,7 @@
 #' 12/3/2016
 
 ################################################################################
-setwd("C:/Users/User/Dropbox/Data Science/Data Science_Jonhs Hopkins Courses/10. Capstone")
+# setwd("C:/Users/User/Dropbox/Data Science/Data Science_Jonhs Hopkins Courses/10. Capstone")
 
 
 

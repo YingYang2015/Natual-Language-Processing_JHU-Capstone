@@ -1,9 +1,9 @@
 library(shiny)
 
-setwd("C:/Users/User/Dropbox/Data Science/Data Science_Jonhs Hopkins Courses/10. Capstone")
+# setwd("C:/Users/User/Dropbox/Data Science/Data Science_Jonhs Hopkins Courses/10. Capstone")
 # setwd("C:/Users/wangjia/Dropbox/YY/Capstone")
 
-source("PredictionFunctions.R")
+source("predictionFunctions.R")
 
 
 shinyServer(function(input, output) {
