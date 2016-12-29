@@ -7,6 +7,13 @@
 
 ####################### 1. provide clean corpus ##############################
 # load function cleanCorpus
+
+profanity <- file("profanitywords.txt", "r")
+profanityFilter <- readLines(profanity, encoding = "UTF-8", skipNul=TRUE)
+profanityFilter <- iconv(profanityFilter,"latin1","ASCII",sub = "")
+close(profanity)
+save(profanityFilter, file = "profanityFilter.RData")
+
 source("cleanCorpus.R")  
 
 ############################## 2. Build the N-grams for the tokenized data #######################

@@ -88,7 +88,9 @@ kable(dataSummary)
 # #or
 # lapply(proData[1:2], as.character)
 
+
 source("PreprocessFunctions.R")
+
 ### clean the corpus of the original data
 cleanTwitter <- cleanCorpus(twitter, profanityFilter)
 save(cleanTwitter, file = "finalTwitterCorpus.RData")

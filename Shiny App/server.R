@@ -1,11 +1,14 @@
 library(shiny)
+library(tm)
 
-# setwd("C:/Users/User/Dropbox/Data Science/Data Science_Jonhs Hopkins Courses/10. Capstone")
-# setwd("C:/Users/wangjia/Dropbox/YY/Capstone")
+########## Function applies the backoff method #########################
+source("cleanCorpus.R")
+source("backoffPrediction.R")
+load("bigramModel.RData")
+load("trigramModel.RData")
+load("fourgramModel.RData")
 
-source("predictionFunctions.R")
-
-
+############# Start building the server #################################
 shinyServer(function(input, output) {
         output$pred <- renderText({
                 backoffPrediction(input$textInput)

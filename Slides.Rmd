@@ -34,25 +34,25 @@ knitr::include_graphics("RStudio Logo.png")
 - Contains: Twitter, Blogs, News
 - Clean/Compressed data: Shrink from over 550MB to 32MB
 
-  - remove words with non-ASCII characters 
-  - convert to lower cases
-  - remove punctuation
-  - remove extra white spaces
-  - remove unmeaningful repeated words
-  - remove number
-  - remove URL, websites, email
-  - remove profanity words
+        - remove words with non-ASCII characters 
+        - convert to lower cases
+        - remove punctuation
+        - remove extra white spaces
+        - remove unmeaningful repeated words
+        - remove number
+        - remove URL, websites, email
+        - remove profanity words
   
 ## N-gram Models
 [N-grams](https://en.wikipedia.org/wiki/N-gram) are created to explore word frequencies.
 
 - Unigram, Bi-gram, Tri-gram, and Four-gram are used
 
-```{r, out.width = "600px"}
-knitr::include_graphics("Wordcloud/Sample2Cloud.png")
+```{r, out.width = "300px"}
+knitr::include_graphics("Shiny App/Wordcloud/Sample2Cloud.png")
 ```
-```{r, out.width = "600px"}
-knitr::include_graphics("Wordcloud/Sample3Cloud.png")
+```{r, out.width = "300px"}
+knitr::include_graphics("Shiny App/Wordcloud/Sample3Cloud.png")
 ```
 
 ## Efficient Prediction Algorithm
