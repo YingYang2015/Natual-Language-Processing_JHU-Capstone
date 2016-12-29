@@ -88,7 +88,8 @@ load("trigramModel.RData")
 load("fourgramModel.RData")
 source("predictionFunctions.R")
 
-newPhrase <- "Nice to meet you"
-backoffPrediction(newPhrase)
+newPhrase <- "How are you"
+system.time(backoffPrediction(newPhrase))
+
 
         
